@@ -59,149 +59,99 @@ GRANT ALL PRIVILEGES ON veterinaria_patitas_felices2.\* TO 'curso_user'@'%';
 FLUSH PRIVILEGES; -->
 
 
-
-CREATE DATABASE veterinaria_patitas_felices
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_general_ci;
-
+CREATE DATABASE veterinaria_patitas_felices;
 USE veterinaria_patitas_felices;
 
-CREATE TABLE usuarios (
-id_usuario INT AUTO_INCREMENT PRIMARY KEY,
-email VARCHAR(100) NOT NULL UNIQUE,
-password VARCHAR(255) NOT NULL,
-rol ENUM('USER', 'ADMIN') NOT NULL,
-activo BOOLEAN DEFAULT TRUE,
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
 );
 
-CREATE TABLE clientes (
-id_cliente INT AUTO_INCREMENT PRIMARY KEY,
-nombre VARCHAR(50) NOT NULL,
-apellido VARCHAR(50) NOT NULL,
-telefono VARCHAR(20),
-direccion VARCHAR(100),
-id_usuario INT NOT NULL UNIQUE,
-FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
-ON DELETE CASCADE
-);
+INSERT IGNORE INTO roles (nombre) VALUES
+('USER'),
+('ADMIN');
 
-CREATE TABLE veterinarios (
-id_veterinario INT AUTO_INCREMENT PRIMARY KEY,
-nombre VARCHAR(50) NOT NULL,
-apellido VARCHAR(50) NOT NULL,
-matricula VARCHAR(30) NOT NULL UNIQUE,
-especialidad VARCHAR(50),
-id_usuario INT NOT NULL UNIQUE,
-FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
-ON DELETE CASCADE
-);
-
-CREATE TABLE mascotas (
-id_mascota INT AUTO_INCREMENT PRIMARY KEY,
-nombre VARCHAR(50) NOT NULL,
-especie VARCHAR(30) NOT NULL,
-raza VARCHAR(50),
-edad INT,
-id_cliente INT NOT NULL,
-FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente)
-ON DELETE CASCADE
-);
-
-CREATE TABLE historial_clinico (
-id_historial INT AUTO_INCREMENT PRIMARY KEY,
-fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-descripcion TEXT NOT NULL,
-tratamiento TEXT,
-id_mascota INT NOT NULL,
-id_veterinario INT NOT NULL,
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-FOREIGN KEY (id_mascota) REFERENCES mascotas(id_mascota)
-ON DELETE CASCADE,
-FOREIGN KEY (id_veterinario) REFERENCES veterinarios(id_veterinario)
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    activo BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 
-INSERT INTO usuarios (email, password, rol)
-VALUES (
-  'cliente1@mail.com',
-  '$2b$10$hash_simulado_cliente',
-  'USER'
+CREATE TABLE IF NOT EXISTS usuario_roles (
+    usuario_id INT NOT NULL,
+    rol_id INT NOT NULL,
+    PRIMARY KEY (usuario_id, rol_id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    FOREIGN KEY (rol_id) REFERENCES roles(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-INSERT INTO usuarios (email, password, rol)
-VALUES (
-  'vet1@mail.com',
-  '$2b$10$hash_simulado_veterinario',
-  'ADMIN'
+CREATE TABLE IF NOT EXISTS clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL UNIQUE,
+    nombre VARCHAR(50) NOT NULL,
+    apellido VARCHAR(50) NOT NULL,
+    telefono VARCHAR(20),
+    direccion VARCHAR(100),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-INSERT INTO clientes (nombre, apellido, telefono, direccion, id_usuario)
-VALUES (
-  'Juan',
-  'Pérez',
-  '1122334455',
-  'Av. Siempre Viva 123',
-  1
+CREATE TABLE IF NOT EXISTS veterinarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL UNIQUE,
+    nombre VARCHAR(50) NOT NULL,
+    apellido VARCHAR(50) NOT NULL,
+    matricula VARCHAR(20) NOT NULL UNIQUE,
+    especialidad VARCHAR(50),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-INSERT INTO veterinarios (nombre, apellido, matricula, especialidad, id_usuario)
-VALUES (
-  'Ana',
-  'Gómez',
-  'VET-4567',
-  'Clínica general',
-  2
+CREATE TABLE IF NOT EXISTS mascotas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id INT NOT NULL,
+    nombre VARCHAR(50) NOT NULL,
+    especie VARCHAR(30) NOT NULL,
+    fecha_nacimiento DATE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-INSERT INTO mascotas (nombre, especie, raza, edad, id_cliente)
-VALUES (
-  'Firulais',
-  'Perro',
-  'Labrador',
-  5,
-  1
+CREATE TABLE IF NOT EXISTS historial_clinico (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    mascota_id INT NOT NULL,
+    veterinario_id INT NOT NULL,
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+    descripcion VARCHAR(250) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (mascota_id) REFERENCES mascotas(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    FOREIGN KEY (veterinario_id) REFERENCES veterinarios(id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
 );
 
-
-INSERT INTO historial_clinico (descripcion, tratamiento, id_mascota, id_veterinario)
-VALUES (
-  'Control general anual',
-  'Vacuna antirrábica aplicada',
-  1,
-  1
-);
-
-
-SELECT *
-FROM mascotas
-WHERE id_cliente = 1;
-
-
-SELECT 
-  h.fecha,
-  h.descripcion,
-  h.tratamiento,
-  v.nombre AS veterinario_nombre,
-  v.apellido AS veterinario_apellido
-FROM historial_clinico h
-JOIN veterinarios v ON h.id_veterinario = v.id_veterinario
-WHERE h.id_mascota = 1
-ORDER BY h.fecha DESC;
-
-
-SELECT 
-  m.nombre AS mascota,
-  h.fecha,
-  h.descripcion,
-  h.tratamiento
-FROM clientes c
-JOIN mascotas m ON c.id_cliente = m.id_cliente
-JOIN historial_clinico h ON m.id_mascota = h.id_mascota
-WHERE c.id_usuario = 1;
