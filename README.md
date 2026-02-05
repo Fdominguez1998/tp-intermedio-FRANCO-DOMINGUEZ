@@ -1,157 +1,234 @@
-# tp-intermedio-FRANCO-DOMINGUEZ
-<!-- 
-CREATE DATABASE veterinaria_patitas_felices;
-USE veterinaria_patitas_felices;
+# TP Intermedio - Backend Veterinaria
 
--- =========================
--- DUEÑOS (USUARIOS)
--- =========================
-CREATE TABLE duenos (
-id INT PRIMARY KEY AUTO_INCREMENT,
-nombre VARCHAR(50) NOT NULL,
-apellido VARCHAR(50) NOT NULL,
-email VARCHAR(100) NOT NULL UNIQUE,
-password VARCHAR(255) NOT NULL,
-telefono VARCHAR(20),
-direccion VARCHAR(100),
-created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+## Descripción
 
--- =========================
--- MASCOTAS (ENTIDAD PROTEGIDA)
--- =========================
-CREATE TABLE mascotas (
-id INT PRIMARY KEY AUTO_INCREMENT,
-nombre VARCHAR(50) NOT NULL,
-especie VARCHAR(30) NOT NULL,
-fecha_nacimiento DATE,
-id_dueno INT NOT NULL,
-FOREIGN KEY (id_dueno) REFERENCES duenos(id)
-ON DELETE CASCADE
-);
+Este proyecto es un backend en **Node.js con TypeScript**, usando **Express y MySQL**, que implementa **autenticación JWT** y sigue el patrón **MVC**.
+Permite registrar dueños, autenticarlos y gestionar sus mascotas (CRUD), de manera que cada dueño solo pueda acceder a sus propias mascotas.
 
--- =========================
--- VETERINARIOS
--- =========================
-CREATE TABLE veterinarios (
-id INT PRIMARY KEY AUTO_INCREMENT,
-nombre VARCHAR(50) NOT NULL,
-apellido VARCHAR(50) NOT NULL,
-matricula VARCHAR(20) NOT NULL UNIQUE,
-especialidad VARCHAR(50) NOT NULL
-);
+---
 
--- =========================
--- HISTORIAL CLÍNICO
--- =========================
-CREATE TABLE historial_clinico (
-id INT PRIMARY KEY AUTO_INCREMENT,
-id_mascota INT NOT NULL,
-id_veterinario INT NOT NULL,
-fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
-descripcion VARCHAR(250) NOT NULL,
-FOREIGN KEY (id_mascota) REFERENCES mascotas(id)
-ON DELETE CASCADE,
-FOREIGN KEY (id_veterinario) REFERENCES veterinarios(id)
-);
+## Tecnologías usadas
 
-GRANT ALL PRIVILEGES ON veterinaria_patitas_felices2.\* TO 'curso_user'@'%';
-FLUSH PRIVILEGES; -->
+- Node.js + TypeScript
+- Express
+- MySQL (mysql2/promise)
+- Bcrypt (hash de contraseñas)
+- JSON Web Token (JWT)
+- express-validator (validaciones)
 
+---
 
-CREATE DATABASE veterinaria_patitas_felices;
-USE veterinaria_patitas_felices;
+## Estructura del proyecto
 
-CREATE TABLE IF NOT EXISTS roles (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL UNIQUE
-);
+```
+src/
+ ├─ controllers/
+ ├─ services/
+ ├─ models/
+ ├─ routes/
+ ├─ middlewares/
+ ├─ database/
+ ├─ validators/
+ ├─ utils/
+ ├─ types/
+ └─ index.ts
+```
 
-INSERT IGNORE INTO roles (nombre) VALUES
-('USER'),
-('ADMIN');
+---
 
-CREATE TABLE IF NOT EXISTS usuarios (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    activo BOOLEAN DEFAULT TRUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+## Instalación
 
+1. Clonar el repositorio:
 
-CREATE TABLE IF NOT EXISTS usuario_roles (
-    usuario_id INT NOT NULL,
-    rol_id INT NOT NULL,
-    PRIMARY KEY (usuario_id, rol_id),
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE,
-    FOREIGN KEY (rol_id) REFERENCES roles(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
+```bash
+git clone <URL_DEL_REPOSITORIO>
+cd tp-intermedio-NOMBRE-APELLIDO
+```
 
+2. Instalar dependencias:
 
-CREATE TABLE IF NOT EXISTS clientes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario_id INT NOT NULL UNIQUE,
-    nombre VARCHAR(50) NOT NULL,
-    apellido VARCHAR(50) NOT NULL,
-    telefono VARCHAR(20),
-    direccion VARCHAR(100),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
+```bash
+npm install
+```
 
+3. Crear archivo `.env` basado en `.env.example`:
 
-CREATE TABLE IF NOT EXISTS veterinarios (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario_id INT NOT NULL UNIQUE,
-    nombre VARCHAR(50) NOT NULL,
-    apellido VARCHAR(50) NOT NULL,
-    matricula VARCHAR(20) NOT NULL UNIQUE,
-    especialidad VARCHAR(50),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
+```
+PORT=3000
+DB_HOST=localhost
+DB_USER=tu_usuario
+DB_PASSWORD=tu_password
+DB_NAME=veterinaria_patitas_felices
+JWT_SECRET=clave_super_secreta
+```
 
+4. Asegurarse de que la base de datos exista (`veterinaria_patitas_felices`) y tenga las tablas:
 
-CREATE TABLE IF NOT EXISTS mascotas (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    cliente_id INT NOT NULL,
-    nombre VARCHAR(50) NOT NULL,
-    especie VARCHAR(30) NOT NULL,
-    fecha_nacimiento DATE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
+- duenos
+- mascotas
+- veterinarios
+- historial_clinico
 
+---
 
-CREATE TABLE IF NOT EXISTS historial_clinico (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    mascota_id INT NOT NULL,
-    veterinario_id INT NOT NULL,
-    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
-    descripcion VARCHAR(250) NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (mascota_id) REFERENCES mascotas(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE,
-    FOREIGN KEY (veterinario_id) REFERENCES veterinarios(id)
-        ON DELETE RESTRICT
-        ON UPDATE CASCADE
-);
+## Ejecución del servidor
 
+```bash
+npm run dev
+```
+
+El servidor quedará corriendo en `http://localhost:3000`.
+
+---
+
+## Endpoints
+
+### **Autenticación (públicos)**
+
+#### Registro de dueño
+
+**POST** `/api/auth/register`
+
+**Body (JSON):**
+
+```json
+{
+  "nombre": "Franco",
+  "apellido": "Dominguez",
+  "email": "franco@test.com",
+  "password": "123456",
+  "telefono": "123456789",
+  "direccion": "Calle Falsa 123"
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "token": "<JWT_TOKEN>"
+}
+```
+
+---
+
+#### Login de dueño
+
+**POST** `/api/auth/login`
+
+**Body (JSON):**
+
+```json
+{
+  "email": "franco@test.com",
+  "password": "123456"
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "token": "<JWT_TOKEN>"
+}
+```
+
+---
+
+### **Mascotas (protegidas)**
+
+> Todas las rutas requieren el header `Authorization: Bearer <JWT_TOKEN>`
+
+#### Listar mascotas
+
+**GET** `/api/mascotas`
+
+**Respuesta:**
+
+```json
+[
+  {
+    "id": 1,
+    "nombre": "Firulais",
+    "especie": "Perro",
+    "fecha_nacimiento": "2020-05-01T00:00:00.000Z",
+    "id_dueno": 1
+  }
+]
+```
+
+#### Crear mascota
+
+**POST** `/api/mascotas`
+
+**Body (JSON):**
+
+```json
+{
+  "nombre": "Firulais",
+  "especie": "Perro",
+  "fecha_nacimiento": "2020-05-01"
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "id": 1
+}
+```
+
+#### Actualizar mascota
+
+**PATCH** `/api/mascotas/:id`
+
+**Body (JSON):**
+
+```json
+{
+  "nombre": "Firulais",
+  "especie": "Perro",
+  "fecha_nacimiento": "2020-06-01"
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "message": "Mascota actualizada"
+}
+```
+
+#### Eliminar mascota
+
+**DELETE** `/api/mascotas/:id`
+
+**Respuesta:**
+
+```json
+{
+  "message": "Mascota eliminada"
+}
+```
+
+---
+
+## Variables de entorno (`.env`)
+
+- `PORT` → puerto del servidor (ej: 3000)
+- `DB_HOST` → host de MySQL (ej: localhost)
+- `DB_USER` → usuario de MySQL
+- `DB_PASSWORD` → contraseña del usuario
+- `DB_NAME` → nombre de la base de datos
+- `JWT_SECRET` → clave secreta para firmar los JWT
+
+---
+
+## Notas
+
+- Las contraseñas se almacenan **hasheadas** con bcrypt.
+- Todas las operaciones sobre mascotas están protegidas: **solo el dueño puede ver/editar sus propias mascotas**.
+- Se puede agregar validación adicional usando **express-validator**.
+- Middleware de errores centralizado (`error.middleware.ts`) maneja errores de manera uniforme.

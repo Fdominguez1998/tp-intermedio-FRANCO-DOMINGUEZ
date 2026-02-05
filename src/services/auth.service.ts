@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import * as userModel from "../models/users.model";
+import * as userModel from "../models/dueno.model";
 import jwt, { SignOptions } from "jsonwebtoken";
 import { JwtPayload, UserRole } from "../types/auth";
 

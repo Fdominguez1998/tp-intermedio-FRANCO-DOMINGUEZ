@@ -1,44 +1,32 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { JwtPayload } from '../types/auth';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
+dotenv.config();
 
-/**
- * Middleware de autenticación
- *
- * Verifica que el token sea válido y lo almacena en req.user
- */
-export const authenticate = (
-  req: Request,
+// Extendemos Request para incluir userId
+export interface AuthRequest extends Request {
+  userId?: number;
+}
+
+export function authMiddleware(
+  req: AuthRequest,
   res: Response,
-  next: NextFunction
-) => {
-  const token = req.headers.authorization?.split(' ')[1]; // Bearer <token>
+  next: NextFunction,
+) {
+  const authHeader = req.headers.authorization;
 
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Token no proporcionado" });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ message: 'Invalid token or expired' });
-    }
-    req.user = decoded as JwtPayload;
-    next();
-  });
-};
+  const token = authHeader.split(" ")[1];
 
-/**
- * Middleware de autorización
- *
- * Verifica que el usuario tenga uno de los roles permitidos
- */
-export const authorize = (roles: Array<'user' | 'admin'>) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Acceso denegado' });
-    }
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+    req.userId = payload.id; // guardamos el id del usuario en la request
     next();
-  };
-};
+  } catch (error) {
+    return res.status(401).json({ message: "Token inválido" });
+  }
+}

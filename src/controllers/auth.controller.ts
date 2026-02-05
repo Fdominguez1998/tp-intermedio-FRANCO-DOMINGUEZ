@@ -1,43 +1,68 @@
 import { Request, Response } from "express";
-import * as authService from "../services/auth.service";
-import { validationResult } from "express-validator";
+import * as duenoService from "../services/duenos.service";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
-export const register = async (req: Request, res: Response) => {
+dotenv.config();
+
+export async function register(req: Request, res: Response) {
   try {
-    // Verificar errores de validación
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+    const { nombre, apellido, email, password, telefono, direccion } = req.body;
 
-    const { username, email, password } = req.body;
-    await authService.register(username, email, password);
+    // Verificar si el email ya existe
+    const existingUser = await duenoService.obtenerDuenoPorEmail(email);
+    if (existingUser)
+      return res.status(400).json({ message: "Email ya registrado" });
 
-    return res.status(201).json({ message: "Usuario creado exitosamente" });
-  } catch (error: any) {
-    if (error.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({ error: "El usuario o email ya existe" });
-    }
-    return res.status(500).json({ error: "Error al registrar el usuario" });
+    // Crear usuario
+    const userId = await duenoService.crearDueno({
+      nombre,
+      apellido,
+      email,
+      password,
+      telefono,
+      direccion,
+    });
+
+    // Generar token
+    const token = jwt.sign(
+      { id: userId, email },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "1h" },
+    );
+
+    res.status(201).json({ token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al registrar usuario" });
   }
-};
+}
 
-export const login = async (req: Request, res: Response) => {
+export async function login(req: Request, res: Response) {
   try {
-    // Verificar errores de validación
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const { email, password } = req.body;
-    const token = await authService.login(email, password);
+    const user = await duenoService.obtenerDuenoPorEmail(email);
+    if (!user)
+      return res
+        .status(400)
+        .json({ message: "Email o contraseña incorrectos" });
 
-    return res.json({ token });
-  } catch (error: any) {
-    if (error.message === "Credenciales inválidas") {
-      return res.status(401).json({ error: "Credenciales inválidas" });
-    }
-    return res.status(500).json({ error: "Error al iniciar sesión" });
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword)
+      return res
+        .status(400)
+        .json({ message: "Email o contraseña incorrectos" });
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "1h" },
+    );
+
+    res.json({ token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al iniciar sesión" });
   }
-};
+}
