@@ -41,8 +41,8 @@ src/
 1. Clonar el repositorio:
 
 ```bash
-git clone <URL_DEL_REPOSITORIO>
-cd tp-intermedio-NOMBRE-APELLIDO
+git clone https://github.com/Fdominguez1998/tp-intermedio-FRANCO-DOMINGUEZ.git
+cd tp-intermedio-FRANCO-DOMINGUEZ
 ```
 
 2. Instalar dependencias:
